@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { createCase, getCases, updateCase, deleteCase } = require('../controllers/caseController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { createCase, getCases, updateCase, deleteCase } = require('../controllers/caseController'); // Certifique-se do caminho correto
+const { authMiddleware, roleMiddleware } = require('../middleware/authMiddleware');
 
-router.post('/', authMiddleware, createCase);
-router.get('/', authMiddleware, getCases);
-router.put('/:id', authMiddleware, updateCase);
-router.delete('/:id', authMiddleware, deleteCase);
+// Rotas CRUD para casos
+router.post('/', authMiddleware, roleMiddleware(['admin', 'perito']), createCase); // Criar Caso
+router.get('/', authMiddleware, getCases); // Listar Casos
+router.put('/:id', authMiddleware, updateCase); // Atualizar Caso
+router.delete('/:id', authMiddleware, deleteCase); // Deletar Caso
 
 module.exports = router;

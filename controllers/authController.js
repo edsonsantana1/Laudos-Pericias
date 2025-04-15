@@ -1,3 +1,4 @@
+// authController.js
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -9,7 +10,8 @@ exports.register = async (req, res) => {
     if (user) {
       return res.status(400).json({ msg: 'Usuário já existe' });
     }
-    user = new User({ nome, email, senha, role });
+    const matricula = `MAT${Date.now()}`; // Gerar matrícula única
+    user = new User({ nome, email, senha, role, matricula });
     const salt = await bcrypt.genSalt(10);
     user.senha = await bcrypt.hash(senha, salt);
     await user.save();
@@ -25,9 +27,9 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  const { email, senha } = req.body;
+  const { matricula, senha } = req.body; // Alterar para usar matrícula
   try {
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ matricula });
     if (!user) {
       return res.status(400).json({ msg: 'Credenciais inválidas' });
     }
