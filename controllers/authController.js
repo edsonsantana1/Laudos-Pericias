@@ -1,8 +1,8 @@
-// authController.js
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// Registro de usuário
 exports.register = async (req, res) => {
   const { nome, email, senha, role } = req.body;
   try {
@@ -16,7 +16,7 @@ exports.register = async (req, res) => {
     user.senha = await bcrypt.hash(senha, salt);
     await user.save();
     const payload = { user: { id: user.id } };
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: 360000 }, (err, token) => {
+    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
       if (err) throw err;
       res.json({ token });
     });
@@ -26,8 +26,9 @@ exports.register = async (req, res) => {
   }
 };
 
+// Login de usuário
 exports.login = async (req, res) => {
-  const { matricula, senha } = req.body; // Alterar para usar matrícula
+  const { matricula, senha } = req.body;
   try {
     let user = await User.findOne({ matricula });
     if (!user) {
@@ -37,13 +38,60 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ msg: 'Credenciais inválidas' });
     }
-    const payload = { user: { id: user.id } };
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: 360000 }, (err, token) => {
-      if (err) throw err;
-      res.json({ token });
-    });
+
+    // Gere o Access Token
+    const accessToken = jwt.sign(
+      { user: { id: user.id, role: user.role } },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' } // Expira em 1 hora
+    );
+
+    // Gere o Refresh Token
+    const refreshToken = jwt.sign(
+      { user: { id: user.id } },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: '7d' } // Expira em 7 dias
+    );
+
+    // Salve o Refresh Token no banco de dados
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.status(200).json({ accessToken, refreshToken });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Erro no servidor');
+  }
+};
+
+// Endpoint de Refresh Token
+exports.refreshToken = async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(401).json({ msg: 'Refresh Token não fornecido' });
+  }
+
+  try {
+    // Verifique o Refresh Token
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+    // Encontre o usuário no banco de dados
+    const user = await User.findById(decoded.user.id);
+    if (!user || user.refreshToken !== refreshToken) {
+      return res.status(403).json({ msg: 'Refresh Token inválido' });
+    }
+
+    // Gere um novo Access Token
+    const accessToken = jwt.sign(
+      { user: { id: user.id, role: user.role } },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' } // Expira em 1 hora
+    );
+
+    res.status(200).json({ accessToken });
+  } catch (err) {
+    console.error(err.message);
+    res.status(403).json({ msg: 'Refresh Token expirado ou inválido' });
   }
 };

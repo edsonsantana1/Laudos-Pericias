@@ -5,7 +5,8 @@ const EvidenceSchema = new mongoose.Schema({
   imageUrl: { type: String }, // URL da imagem
   videoUrl: { type: String }, // URL do vídeo
   documentUrl: { type: String }, // URL do documento
-  mapLocation: { type: String }, // Mapa de localização
+  latitude: { type: Number, required: true }, // Latitude da localização
+  longitude: { type: Number, required: true }, // Longitude da localização
   description: { type: String, required: true }, // Descrição da evidência
   collectionDate: { type: Date, required: true }, // Data da coleta
   collectionTime: { type: String, required: true }, // Hora da coleta

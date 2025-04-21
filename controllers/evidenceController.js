@@ -1,6 +1,6 @@
 const Evidence = require('../models/Evidence');
 
-// Função para criar uma nova evidência
+// Criar nova evidência
 exports.createEvidence = async (req, res) => {
   try {
     const evidence = new Evidence(req.body);
@@ -11,7 +11,7 @@ exports.createEvidence = async (req, res) => {
   }
 };
 
-// Função para obter todas as evidências
+// Obter todas as evidências
 exports.getAllEvidence = async (req, res) => {
   try {
     const evidences = await Evidence.find().populate('case');
@@ -21,7 +21,7 @@ exports.getAllEvidence = async (req, res) => {
   }
 };
 
-// Função para obter uma evidência por ID
+// Obter evidência por ID
 exports.getEvidenceById = async (req, res) => {
   try {
     const evidence = await Evidence.findById(req.params.id).populate('case');
@@ -34,7 +34,7 @@ exports.getEvidenceById = async (req, res) => {
   }
 };
 
-// Função para atualizar uma evidência por ID
+// Atualizar evidência por ID
 exports.updateEvidence = async (req, res) => {
   try {
     const evidence = await Evidence.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -47,7 +47,7 @@ exports.updateEvidence = async (req, res) => {
   }
 };
 
-// Função para deletar uma evidência por ID
+// Deletar evidência por ID
 exports.deleteEvidence = async (req, res) => {
   try {
     const evidence = await Evidence.findByIdAndDelete(req.params.id);

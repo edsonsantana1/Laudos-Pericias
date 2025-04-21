@@ -13,9 +13,6 @@ exports.createCase = async (req, res) => {
     patientGender,
     patientID,
     patientContact,
-    expertName,
-    expertRegistration,
-    expertContact,
     incidentDate,
     incidentLocation,
     incidentDescription,
@@ -34,9 +31,6 @@ exports.createCase = async (req, res) => {
       patientGender,
       patientID,
       patientContact,
-      expertName,
-      expertRegistration,
-      expertContact,
       incidentDate,
       incidentLocation,
       incidentDescription,
@@ -75,9 +69,6 @@ exports.updateCase = async (req, res) => {
     patientGender,
     patientID,
     patientContact,
-    expertName,
-    expertRegistration,
-    expertContact,
     incidentDate,
     incidentLocation,
     incidentDescription,
@@ -100,9 +91,6 @@ exports.updateCase = async (req, res) => {
     foundCase.patientGender = patientGender || foundCase.patientGender;
     foundCase.patientID = patientID || foundCase.patientID;
     foundCase.patientContact = patientContact || foundCase.patientContact;
-    foundCase.expertName = expertName || foundCase.expertName;
-    foundCase.expertRegistration = expertRegistration || foundCase.expertRegistration;
-    foundCase.expertContact = expertContact || foundCase.expertContact;
     foundCase.incidentDate = incidentDate || foundCase.incidentDate;
     foundCase.incidentLocation = incidentLocation || foundCase.incidentLocation;
     foundCase.incidentDescription = incidentDescription || foundCase.incidentDescription;

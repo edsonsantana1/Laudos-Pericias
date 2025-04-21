@@ -2,11 +2,19 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Função para gerar uma matrícula única
-const gerarMatricula = () => {
+// Função para gerar uma matrícula única com base no contador sequencial
+const gerarMatricula = async () => {
   const prefixo = 'MAT';
-  const data = new Date();
-  const matricula = `${prefixo}${data.getFullYear()}${(data.getMonth() + 1).toString().padStart(2, '0')}${data.getDate().toString().padStart(2, '0')}${Math.floor(1000 + Math.random() * 9000)}`;
+  const ano = new Date().getFullYear().toString().slice(-2); // Últimos dois dígitos do ano
+
+  // Obtém o número total de usuários no banco de dados
+  const totalUsuarios = await User.countDocuments(); // Retorna o número de usuários já cadastrados
+
+  // Incrementa o total para gerar o próximo número sequencial
+  const numeroSequencial = (totalUsuarios + 1).toString().padStart(6, '0'); // Formato fixo de 6 dígitos
+
+  const matricula = `${prefixo}${ano}${numeroSequencial}`; // Exemplo: MAT230001
+  console.log('Matrícula gerada:', matricula); // Log para depuração
   return matricula;
 };
 
@@ -20,8 +28,9 @@ exports.register = async (req, res) => {
       return res.status(400).json({ msg: 'Usuário já existe' });
     }
 
-    // Gera uma matrícula única
-    const matricula = gerarMatricula();
+    // Gera uma matrícula única com lógica sequencial
+    const matricula = await gerarMatricula();
+    console.log('Matrícula enviada para o Atlas:', matricula); // Log para depuração
 
     // Cria um novo usuário
     user = new User({ nome, email, senha, role, matricula });
