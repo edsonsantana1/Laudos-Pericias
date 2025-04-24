@@ -12,7 +12,7 @@ const relatorioRoutes = require('./routes/relatorioRoutes');
 
 // Configuração do CORS para permitir acesso do frontend no Netlify
 app.use(cors({
-  origin: 'https://https://laudo-pericias.netlify.app/', // URL do seu frontend no Netlify
+  origin: 'https://laudo-pericias.netlify.app/', // URL do seu frontend no Netlify
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
