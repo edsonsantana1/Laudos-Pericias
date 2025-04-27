@@ -49,7 +49,15 @@ exports.createCase = async (req, res) => {
 // Função para listar todos os casos relacionados ao usuário
 exports.getCases = async (req, res) => {
   try {
-    const cases = await Case.find({ user: req.user.id }); // Filtra pelo usuário autenticado
+    let cases;
+
+    // Verifica se o usuário é admin, então retorna todos os casos
+    if (req.user.role === 'admin') {
+      cases = await Case.find(); // Retorna todos os casos
+    } else {
+      cases = await Case.find({ user: req.user.id }); // Retorna os casos do usuário autenticado
+    }
+
     res.status(200).json(cases); // Retorna os casos encontrados
   } catch (err) {
     console.error('Erro ao obter casos:', err.message);
