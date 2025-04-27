@@ -15,6 +15,7 @@ const gerarMatricula = async () => {
 exports.createUser = async (req, res) => {
   const { nome, email, senha, role } = req.body;
   try {
+    // Verifica se o email já está registrado
     if (await User.findOne({ email })) {
       return res.status(400).json({ msg: 'Usuário já existe' });
     }
@@ -32,9 +33,12 @@ exports.createUser = async (req, res) => {
 
 // Listar todos os usuários (admin)
 exports.getAllUsers = async (req, res) => {
+  const { page = 1, limit = 10 } = req.query; // Padrão: página 1 e 10 usuários por página
   try {
     const users = await User.find()
-      .select('-senha -refreshToken'); // não expor senha nem refreshToken
+      .select('-senha -refreshToken') // Não expor senha nem refreshToken
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
     res.status(200).json(users);
   } catch (err) {
     console.error('Erro no getAllUsers:', err);
@@ -57,7 +61,7 @@ exports.getUser = async (req, res) => {
   }
 };
 
-// Atualizar um usuário por ID
+// Atualizar um usuário por ID (somente admin pode atualizar)
 exports.updateUser = async (req, res) => {
   try {
     const updated = await User.findByIdAndUpdate(
@@ -65,9 +69,11 @@ exports.updateUser = async (req, res) => {
       req.body,
       { new: true }
     ).select('-senha -refreshToken');
+    
     if (!updated) {
       return res.status(404).json({ msg: 'Usuário não encontrado' });
     }
+
     res.status(200).json(updated);
   } catch (err) {
     console.error('Erro no updateUser:', err);
@@ -75,7 +81,7 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// Deletar um usuário por ID
+// Deletar um usuário por ID (somente admin pode deletar)
 exports.deleteUser = async (req, res) => {
   try {
     const deleted = await User.findByIdAndDelete(req.params.id);
