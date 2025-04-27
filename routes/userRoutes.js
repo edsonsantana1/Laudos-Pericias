@@ -1,19 +1,49 @@
 const express = require('express');
 const router = express.Router();
-const { getUser, updateUser, deleteUser, register } = require('../controllers/userController');
+const {
+  createUser,
+  getAllUsers,
+  getUser,
+  updateUser,
+  deleteUser
+} = require('../controllers/userController');
 const { authMiddleware, roleMiddleware } = require('../middleware/authMiddleware');
 
-// Rota para obter um usuário por ID
-router.get('/:id', authMiddleware, getUser);
+// Listar todos os usuários (apenas admin)
+router.get(
+  '/',
+  authMiddleware,
+  roleMiddleware(['admin']),
+  getAllUsers
+);
 
-// Rota para atualizar um usuário por ID
-router.put('/:id', authMiddleware, updateUser);
+// Obter um único usuário por ID
+router.get(
+  '/:id',
+  authMiddleware,
+  getUser
+);
 
-// Rota para deletar um usuário por ID
-router.delete('/:id', authMiddleware, deleteUser);
+// Atualizar um usuário (admin ou o próprio usuário, se quiser customizar)
+router.put(
+  '/:id',
+  authMiddleware,
+  updateUser
+);
 
-// Rota para cadastrar um novo usuário (acesso restrito a 'admin')
-router.post('/register', authMiddleware, roleMiddleware(['admin']), register);
+// Deletar um usuário
+router.delete(
+  '/:id',
+  authMiddleware,
+  deleteUser
+);
 
-// Exporta o roteador
+// Criar novo usuário (apenas admin)
+router.post(
+  '/',
+  authMiddleware,
+  roleMiddleware(['admin']),
+  createUser
+);
+
 module.exports = router;
