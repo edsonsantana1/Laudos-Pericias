@@ -18,4 +18,4 @@ const CaseSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now } // Data e Hora de Criação
 });
 
-module.exports = mongoose.model('Case', CaseSchema);
+module.exports = mongoose.model('Case', CaseSchema); 
