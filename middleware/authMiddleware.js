@@ -21,6 +21,8 @@ const authMiddleware = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded.user;
 
+    console.log('Decoded user:', req.user); // Log para depuração
+
     // 4) Confirma que o usuário existe
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -29,6 +31,9 @@ const authMiddleware = async (req, res, next) => {
 
     // 5) Anexa o role para controle de acesso
     req.user.role = user.role;
+
+    console.log('User with role:', req.user); // Log para depuração
+
     next();
   } catch (err) {
     console.error('Erro na verificação do token:', err.message);
