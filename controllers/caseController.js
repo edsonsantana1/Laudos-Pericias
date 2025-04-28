@@ -1,6 +1,5 @@
 const Case = require('../models/Case');
 
-
 // Função para criar um caso
 exports.createCase = async (req, res) => {
   const {
@@ -35,33 +34,41 @@ exports.createCase = async (req, res) => {
       incidentLocation,
       incidentDescription,
       incidentWeapon,
-      user: req.user.id, // Vincula o caso ao ID do usuário autenticado
+      assignedUser: req.user.id, // Vincula o caso ao usuário autenticado
     });
 
     const savedCase = await newCase.save(); // Salva no banco de dados
     res.status(201).json(savedCase); // Retorna o caso criado
   } catch (err) {
     console.error('Erro ao criar caso:', err.message);
-    res.status(500).json({ error: 'Erro no servidor' }); // Tratamento de erro
+    res.status(500).json({ error: 'Erro no servidor' });
   }
 };
 
-// Função para listar todos os casos relacionados ao usuário
+// Função para listar casos de acordo com a role
 exports.getCases = async (req, res) => {
   try {
     let cases;
 
-    // Verifica se o usuário é admin, então retorna todos os casos
+    console.log("Usuário acessando casos:", req.user.role, "ID:", req.user.id);
+
+    // Admin vê todos os casos
     if (req.user.role === 'admin') {
       cases = await Case.find(); // Retorna todos os casos
-    } else {
-      cases = await Case.find({ user: req.user.id }); // Retorna os casos do usuário autenticado
+    } 
+    // Perito e Assistente veem apenas casos atribuídos a eles
+    else if (req.user.role === 'perito' || req.user.role === 'assistente') {
+      cases = await Case.find({ assignedUser: req.user.id });
+    } 
+    // Usuário sem permissão
+    else {
+      return res.status(403).json({ msg: "Acesso negado!" });
     }
 
     res.status(200).json(cases); // Retorna os casos encontrados
   } catch (err) {
     console.error('Erro ao obter casos:', err.message);
-    res.status(500).json({ error: 'Erro no servidor' }); // Tratamento de erro
+    res.status(500).json({ error: 'Erro no servidor' });
   }
 };
 
@@ -84,9 +91,9 @@ exports.updateCase = async (req, res) => {
   } = req.body;
 
   try {
-    const foundCase = await Case.findById(req.params.id); // Busca o caso pelo ID
+    const foundCase = await Case.findById(req.params.id);
     if (!foundCase) {
-      return res.status(404).json({ msg: 'Caso não encontrado' }); // Caso não exista
+      return res.status(404).json({ msg: 'Caso não encontrado' });
     }
 
     // Atualiza os campos fornecidos ou mantém os valores atuais
@@ -104,24 +111,24 @@ exports.updateCase = async (req, res) => {
     foundCase.incidentDescription = incidentDescription || foundCase.incidentDescription;
     foundCase.incidentWeapon = incidentWeapon || foundCase.incidentWeapon;
 
-    const updatedCase = await foundCase.save(); // Salva as alterações no banco de dados
-    res.status(200).json(updatedCase); // Retorna o caso atualizado
+    const updatedCase = await foundCase.save();
+    res.status(200).json(updatedCase);
   } catch (err) {
     console.error('Erro ao atualizar caso:', err.message);
-    res.status(500).json({ error: 'Erro no servidor' }); // Tratamento de erro
+    res.status(500).json({ error: 'Erro no servidor' });
   }
 };
 
 // Função para deletar um caso por ID
 exports.deleteCase = async (req, res) => {
   try {
-    const deletedCase = await Case.findByIdAndDelete(req.params.id); // Deleta pelo ID
+    const deletedCase = await Case.findByIdAndDelete(req.params.id);
     if (!deletedCase) {
-      return res.status(404).json({ msg: 'Caso não encontrado' }); // Caso não exista
+      return res.status(404).json({ msg: 'Caso não encontrado' });
     }
-    res.status(200).json({ msg: 'Caso removido com sucesso' }); // Confirmação de deleção
+    res.status(200).json({ msg: 'Caso removido com sucesso' });
   } catch (err) {
     console.error('Erro ao deletar caso:', err.message);
-    res.status(500).json({ error: 'Erro no servidor' }); // Tratamento de erro
+    res.status(500).json({ error: 'Erro no servidor' });
   }
 };
