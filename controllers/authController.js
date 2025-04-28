@@ -20,12 +20,12 @@ exports.register = async (req, res) => {
 
     // Gera tokens
     const accessToken = jwt.sign(
-      { user: { id: user.id, role: user.role } },
+      { id: user.id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
     const refreshToken = jwt.sign(
-      { user: { id: user.id } },
+      { id: user.id },
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: '7d' }
     );
@@ -68,12 +68,12 @@ exports.login = async (req, res) => {
     }
 
     const accessToken = jwt.sign(
-      { user: { id: user.id, role: user.role } },
+      { id: user.id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
     const refreshToken = jwt.sign(
-      { user: { id: user.id } },
+      { id: user.id },
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: '7d' }
     );
@@ -95,32 +95,5 @@ exports.login = async (req, res) => {
   } catch (err) {
     console.error('Erro no login:', err);
     res.status(500).send('Erro no servidor');
-  }
-};
-
-// Refresh token
-exports.refreshToken = async (req, res) => {
-  const { refreshToken } = req.body;
-  if (!refreshToken) {
-    return res.status(401).json({ msg: 'Refresh Token não fornecido' });
-  }
-
-  try {
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const user = await User.findById(decoded.user.id);
-    if (!user || user.refreshToken !== refreshToken) {
-      return res.status(403).json({ msg: 'Refresh Token inválido' });
-    }
-
-    const newAccessToken = jwt.sign(
-      { user: { id: user.id, role: user.role } },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    res.status(200).json({ accessToken: newAccessToken });
-  } catch (err) {
-    console.error('Erro no refreshToken:', err);
-    return res.status(401).json({ msg: 'Refresh Token expirado ou inválido' });
   }
 };
