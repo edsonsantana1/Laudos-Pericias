@@ -1,4 +1,3 @@
-// server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -15,8 +14,8 @@ const app = express();
 // 1) CORS — permitir apenas seu frontend publicado
 app.use(cors({
   origin: 'https://dent-case.netlify.app',
-  methods: ['GET','POST','PUT','DELETE'],
-  allowedHeaders: ['Content-Type','Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
@@ -33,7 +32,7 @@ connectDB();
 
 // 5) Rotas da API
 app.use('/api/auth', authRoutes);
-app.use('/api/cases', caseRoutes);
+app.use('/api/cases', caseRoutes);  // Certifique-se que no frontend a URL seja `/api/cases`
 app.use('/api/users', userRoutes);
 app.use('/api/evidences', evidenceRoutes);
 app.use('/api/laudos', laudoRoutes);
@@ -41,4 +40,4 @@ app.use('/api/relatorios', relatorioRoutes);
 
 // 6) Inicializar servidor
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
