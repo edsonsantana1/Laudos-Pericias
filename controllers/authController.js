@@ -1,4 +1,3 @@
-// controllers/authController.js
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -34,7 +33,17 @@ exports.register = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
-    res.status(201).json({ accessToken, refreshToken });
+    res.status(201).json({
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        nome: user.nome,
+        role: user.role,
+        email: user.email,
+        matricula: user.matricula,
+      },
+    });
   } catch (err) {
     console.error('Erro no register:', err);
     res.status(500).send('Erro no servidor');
@@ -72,7 +81,17 @@ exports.login = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
-    res.status(200).json({ accessToken, refreshToken, user: { id: user.id, nome: user.nome, role: user.role, matricula: user.matricula } });
+    res.status(200).json({
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        nome: user.nome,
+        role: user.role,
+        email: user.email,
+        matricula: user.matricula,
+      },
+    });
   } catch (err) {
     console.error('Erro no login:', err);
     res.status(500).send('Erro no servidor');
