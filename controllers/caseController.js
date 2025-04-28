@@ -54,7 +54,7 @@ exports.getCases = async (req, res) => {
 
     // Admin vê todos os casos
     if (req.user.role === 'admin') {
-      cases = await Case.find(); // Retorna todos os casos
+      cases = await Case.find(); // Retorna todos os casos corretamente
     } 
     // Perito e Assistente veem apenas casos atribuídos a eles
     else if (req.user.role === 'perito' || req.user.role === 'assistente') {
@@ -63,6 +63,10 @@ exports.getCases = async (req, res) => {
     // Usuário sem permissão
     else {
       return res.status(403).json({ msg: "Acesso negado!" });
+    }
+
+    if (!cases || cases.length === 0) {
+      return res.status(404).json({ msg: "Nenhum caso encontrado." });
     }
 
     res.status(200).json(cases); // Retorna os casos encontrados
