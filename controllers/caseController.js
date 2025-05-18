@@ -1,11 +1,15 @@
+// controllers/caseController.js
 const Case = require('../models/Case');
 
-// 1. Criar caso — apenas admin e perito
+// Criar caso — apenas admin e perito
 exports.createCase = async (req, res) => {
   try {
+    if (!['admin', 'perito'].includes(req.user.role)) {
+      return res.status(403).json({ msg: 'Acesso negado!' });
+    }
     const novoCaso = new Case({
       ...req.body,
-      assignedUser: req.user.id // o perito criador
+      assignedUser: req.user._id // perito que cria
     });
     const saved = await novoCaso.save();
     res.status(201).json(saved);
@@ -15,30 +19,50 @@ exports.createCase = async (req, res) => {
   }
 };
 
-// 2. Listar todos os casos — admin, perito, assistente
+// Listar todos os casos — admin, perito, assistente
 exports.getCases = async (req, res) => {
   try {
-    if (!['admin','perito','assistente'].includes(req.user.role)) {
+    if (!['admin', 'perito', 'assistente'].includes(req.user.role)) {
       return res.status(403).json({ msg: 'Acesso negado!' });
     }
-    const cases = await Case.find().populate('assignedUser');
-    if (!cases.length) {
+
+    let casos;
+
+    // Se for assistente, mostrar só casos vinculados a ele
+    if (req.user.role === 'assistente') {
+      casos = await Case.find({ assistentes: req.user._id }).populate('assignedUser').populate('assistentes');
+    } else if (req.user.role === 'perito') {
+      // perito vê todos, mas só pode editar os próprios (controle na edição)
+      casos = await Case.find().populate('assignedUser').populate('assistentes');
+    } else {
+      // admin vê todos
+      casos = await Case.find().populate('assignedUser').populate('assistentes');
+    }
+
+    if (!casos.length) {
       return res.status(404).json({ msg: 'Nenhum caso encontrado.' });
     }
-    return res.status(200).json(cases);
+    return res.status(200).json(casos);
   } catch (err) {
     console.error('Erro ao obter casos:', err);
     return res.status(500).json({ error: 'Erro no servidor' });
   }
 };
 
-// 3. Visualizar caso por ID — qualquer autenticado
+// Visualizar caso por ID — qualquer autenticado que tenha acesso
 exports.getCaseById = async (req, res) => {
   try {
-    const caso = await Case.findById(req.params.id).populate('assignedUser');
+    const caso = await Case.findById(req.params.id).populate('assignedUser').populate('assistentes');
     if (!caso) {
       return res.status(404).json({ msg: 'Caso não encontrado' });
     }
+
+    // Verifica permissão para visualizar:
+    if (req.user.role === 'assistente' && !caso.assistentes.some(a => a._id.equals(req.user._id))) {
+      return res.status(403).json({ msg: 'Acesso negado!' });
+    }
+    // perito e admin veem todos
+
     return res.status(200).json(caso);
   } catch (err) {
     console.error('Erro ao buscar caso:', err);
@@ -46,7 +70,7 @@ exports.getCaseById = async (req, res) => {
   }
 };
 
-// 4. Atualizar caso — só admin ou perito dono
+// Atualizar caso — só admin ou perito dono
 exports.updateCase = async (req, res) => {
   try {
     const foundCase = await Case.findById(req.params.id);
@@ -56,7 +80,7 @@ exports.updateCase = async (req, res) => {
 
     if (
       req.user.role !== 'admin' &&
-      !(req.user.role === 'perito' && foundCase.assignedUser.equals(req.user.id))
+      !(req.user.role === 'perito' && foundCase.assignedUser.equals(req.user._id))
     ) {
       return res.status(403).json({ msg: 'Acesso negado!' });
     }
@@ -70,7 +94,7 @@ exports.updateCase = async (req, res) => {
   }
 };
 
-// 5. Deletar caso — apenas admin
+// Deletar caso — apenas admin
 exports.deleteCase = async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
