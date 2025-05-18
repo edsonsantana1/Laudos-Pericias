@@ -1,8 +1,24 @@
 const Evidence = require('../models/Evidence');
+const Case = require('../models/Case');
 
 // Criar nova evidência
 exports.createEvidence = async (req, res) => {
   try {
+    const user = req.user;
+    const { case: caseId } = req.body;
+
+    // Verifica se o caso existe
+    const caso = await Case.findById(caseId);
+    if (!caso) return res.status(404).json({ error: 'Caso não encontrado' });
+
+    // Se for assistente, precisa estar vinculado ao caso
+    if (user.role === 'assistente') {
+      const pertence = caso.assistentes.some(id => id.toString() === user._id.toString());
+      if (!pertence) {
+        return res.status(403).json({ error: 'Você não pode adicionar evidência a este caso.' });
+      }
+    }
+
     const evidence = new Evidence(req.body);
     await evidence.save();
     res.status(201).json(evidence);
@@ -26,7 +42,7 @@ exports.getEvidenceById = async (req, res) => {
   try {
     const evidence = await Evidence.findById(req.params.id).populate('case');
     if (!evidence) {
-      return res.status(404).json({ error: 'Evidence not found' });
+      return res.status(404).json({ error: 'Evidência não encontrada' });
     }
     res.status(200).json(evidence);
   } catch (error) {
@@ -34,12 +50,17 @@ exports.getEvidenceById = async (req, res) => {
   }
 };
 
-// Atualizar evidência por ID
+// Atualizar evidência por ID — somente admin ou perito
 exports.updateEvidence = async (req, res) => {
   try {
+    const user = req.user;
+    if (user.role !== 'admin' && user.role !== 'perito') {
+      return res.status(403).json({ error: 'Você não tem permissão para atualizar evidências.' });
+    }
+
     const evidence = await Evidence.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!evidence) {
-      return res.status(404).json({ error: 'Evidence not found' });
+      return res.status(404).json({ error: 'Evidência não encontrada' });
     }
     res.status(200).json(evidence);
   } catch (error) {
@@ -47,14 +68,19 @@ exports.updateEvidence = async (req, res) => {
   }
 };
 
-// Deletar evidência por ID
+// Deletar evidência por ID — somente admin ou perito
 exports.deleteEvidence = async (req, res) => {
   try {
+    const user = req.user;
+    if (user.role !== 'admin' && user.role !== 'perito') {
+      return res.status(403).json({ error: 'Você não tem permissão para deletar evidências.' });
+    }
+
     const evidence = await Evidence.findByIdAndDelete(req.params.id);
     if (!evidence) {
-      return res.status(404).json({ error: 'Evidence not found' });
+      return res.status(404).json({ error: 'Evidência não encontrada' });
     }
-    res.status(200).json({ message: 'Evidence deleted successfully' });
+    res.status(200).json({ message: 'Evidência deletada com sucesso' });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
