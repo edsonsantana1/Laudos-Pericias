@@ -20,15 +20,15 @@ exports.register = async (req, res) => {
 
     // Gera tokens
     const accessToken = jwt.sign(
-      { user: { id: user.id, role: user.role } },
+      { id: user.id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
-    );
+    );    
     const refreshToken = jwt.sign(
-      { user: { id: user.id } },
+      { id: user.id },
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: '7d' }
-    );
+    );    
 
     user.refreshToken = refreshToken;
     await user.save();
@@ -107,7 +107,7 @@ exports.refreshToken = async (req, res) => {
 
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const user = await User.findById(decoded.user.id);
+    const user = await User.findById(decoded.id);
     if (!user || user.refreshToken !== refreshToken) {
       return res.status(403).json({ msg: 'Refresh Token inválido' });
     }

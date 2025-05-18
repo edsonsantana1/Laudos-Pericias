@@ -2,6 +2,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+// Middleware de autenticação
 const authMiddleware = async (req, res, next) => {
   // 1) Pega o header "Authorization"
   const header = req.header('Authorization');
@@ -19,9 +20,7 @@ const authMiddleware = async (req, res, next) => {
   try {
     // 3) Decodifica e atribui req.user
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded.user;
-
-    console.log('Decoded user:', req.user); // Log para depuração
+    req.user = decoded.user; // Já atribui o usuário decodificado
 
     // 4) Confirma que o usuário existe
     const user = await User.findById(req.user.id);
@@ -29,11 +28,7 @@ const authMiddleware = async (req, res, next) => {
       return res.status(404).json({ msg: 'Usuário não encontrado' });
     }
 
-    // 5) Anexa o role para controle de acesso
-    req.user.role = user.role;
-
-    console.log('User with role:', req.user); // Log para depuração
-
+    // 5) Continuar para a próxima etapa
     next();
   } catch (err) {
     console.error('Erro na verificação do token:', err.message);
@@ -41,6 +36,7 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
+// Middleware para verificar as permissões de role
 const roleMiddleware = (roles) => (req, res, next) => {
   if (!roles.includes(req.user.role)) {
     return res.status(403).json({ msg: 'Acesso negado' });

@@ -1,21 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const evidenceController = require('../controllers/evidenceController');
-const { authMiddleware, roleMiddleware } = require('../middleware/authMiddleware');
 
-// Criar uma nova evidência — permitido para perito e assistente
-router.post('/', authMiddleware, roleMiddleware(['perito', 'assistente']), evidenceController.createEvidence);
+// Rota para criar uma nova evidência
+router.post('/', evidenceController.createEvidence);
 
-// Obter todas as evidências — permitido para todos autenticados
-router.get('/', authMiddleware, evidenceController.getAllEvidence);
+// Rota para obter todas as evidências
+router.get('/', evidenceController.getAllEvidence);
+// Rota para obter evidências por ID de caso
+router.get('/case/:caseId', evidenceController.getEvidenceByCaseId);
 
-// Obter evidência por ID — permitido para todos autenticados
-router.get('/:id', authMiddleware, evidenceController.getEvidenceById);
+// Rota para obter uma evidência por ID
+router.get('/:id', evidenceController.getEvidenceById);
 
-// Atualizar evidência — permitido somente para admin e perito
-router.put('/:id', authMiddleware, roleMiddleware(['admin', 'perito']), evidenceController.updateEvidence);
+// Rota para atualizar uma evidência por ID
+router.put('/:id', evidenceController.updateEvidence);
 
-// Deletar evidência — permitido somente para admin e perito
-router.delete('/:id', authMiddleware, roleMiddleware(['admin', 'perito']), evidenceController.deleteEvidence);
+// Rota para deletar uma evidência por ID
+router.delete('/:id', evidenceController.deleteEvidence);
 
 module.exports = router;

@@ -1,128 +1,201 @@
-// controllers/caseController.js
 const Case = require('../models/Case');
 
-// Criar caso — apenas admin e perito
+// Função para criar um caso (admin e perito)
 exports.createCase = async (req, res) => {
+  if (!['admin', 'perito'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Acesso negado: apenas administradores e peritos podem criar casos' });
+  }
+
+  const {
+    caseId, status, description, patientName, patientDOB, patientAge,
+    patientGender, patientID, patientContact, incidentDate, incidentLocation,
+    incidentDescription, incidentWeapon
+  } = req.body;
+
   try {
-    if (!['admin', 'perito'].includes(req.user.role)) {
-      return res.status(403).json({ msg: 'Acesso negado!' });
-    }
-    const novoCaso = new Case({
-      ...req.body,
-      assignedUser: req.user._id // perito que cria
+    const assignedUserId = req.user.role === 'perito' ? req.user.id : req.body.assignedUser;
+
+    const newCase = new Case({
+      caseId,
+      status,
+      description,
+      patientName,
+      patientDOB,
+      patientAge,
+      patientGender,
+      patientID,
+      patientContact,
+      incidentDate,
+      incidentLocation,
+      incidentDescription,
+      incidentWeapon,
+      assignedUser: assignedUserId,
+      createdBy: req.user.id
     });
-    const saved = await novoCaso.save();
-    res.status(201).json(saved);
+
+    const savedCase = await newCase.save();
+    res.status(201).json({
+      _id: savedCase._id,
+      caseId: savedCase.caseId,
+      status: savedCase.status,
+      patientName: savedCase.patientName,
+      assignedUser: savedCase.assignedUser,
+      createdAt: savedCase.createdAt
+    });
   } catch (err) {
-    console.error('Erro ao criar caso:', err);
+    console.error('Erro ao criar caso:', err.message);
     res.status(500).json({ error: 'Erro no servidor' });
   }
 };
 
-// Listar todos os casos — admin, perito, assistente (todos veem tudo)
+// Função para listar todos os casos (acesso liberado a todos os usuários autenticados)
 exports.getCases = async (req, res) => {
   try {
-    if (!['admin', 'perito', 'assistente'].includes(req.user.role)) {
-      return res.status(403).json({ msg: 'Acesso negado!' });
+    let cases = await Case.find().select('-__v');
+
+    if (!cases || cases.length === 0) {
+      return res.status(404).json({ error: "Nenhum caso encontrado." });
     }
 
-    const casos = await Case.find().populate('assignedUser').populate('assistentes');
-
-    if (!casos.length) {
-      return res.status(404).json({ msg: 'Nenhum caso encontrado.' });
+    // Ocultar dados sensíveis para usuários que não são admin
+    if (req.user.role !== 'admin') {
+      cases = cases.map(caseItem => {
+        const caseData = caseItem.toObject ? caseItem.toObject() : caseItem;
+        const { patientContact, incidentWeapon, ...safeData } = caseData;
+        return safeData;
+      });
     }
-    return res.status(200).json(casos);
+
+    res.status(200).json(cases);
   } catch (err) {
-    console.error('Erro ao obter casos:', err);
-    return res.status(500).json({ error: 'Erro no servidor' });
+    console.error('Erro ao obter casos:', err.message);
+    res.status(500).json({ error: 'Erro no servidor' });
   }
 };
 
-// Visualizar caso por ID — qualquer autenticado que tenha acesso
+// Função para buscar um caso específico
 exports.getCaseById = async (req, res) => {
   try {
-    const caso = await Case.findById(req.params.id).populate('assignedUser').populate('assistentes');
-    if (!caso) {
-      return res.status(404).json({ msg: 'Caso não encontrado' });
+    const caseData = await Case.findById(req.params.id).select('-__v');
+
+    if (!caseData) {
+      return res.status(404).json({ error: 'Caso não encontrado' });
     }
 
-    // Assistente pode visualizar todos sem restrição
-    // Se quiser controle mais rígido, pode verificar vinculo
+    // Ocultar dados sensíveis se não for admin
+    let responseData = caseData.toObject();
+    if (req.user.role !== 'admin') {
+      const { patientContact, incidentWeapon, ...safeData } = responseData;
+      responseData = safeData;
+    }
 
-    return res.status(200).json(caso);
+    res.status(200).json(responseData);
   } catch (err) {
-    console.error('Erro ao buscar caso:', err);
-    return res.status(500).json({ error: 'Erro no servidor' });
+    console.error('Erro ao buscar caso:', err.message);
+    res.status(500).json({ error: 'Erro no servidor' });
   }
 };
 
-// Atualizar caso — só admin ou perito dono
+// Função para atualizar um caso (admin e perito dono do caso)
 exports.updateCase = async (req, res) => {
   try {
     const foundCase = await Case.findById(req.params.id);
     if (!foundCase) {
-      return res.status(404).json({ msg: 'Caso não encontrado' });
+      return res.status(404).json({ error: 'Caso não encontrado' });
     }
 
-    if (
-      req.user.role !== 'admin' &&
-      !(req.user.role === 'perito' && foundCase.assignedUser.equals(req.user._id))
-    ) {
-      return res.status(403).json({ msg: 'Acesso negado!' });
+    if (req.user.role !== 'admin' && (req.user.role !== 'perito' || foundCase.assignedUser.toString() !== req.user.id)) {
+      return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    Object.assign(foundCase, req.body);
-    const updated = await foundCase.save();
-    return res.status(200).json(updated);
+    const updatableFields = [
+      'status', 'description', 'patientName', 'patientDOB', 'patientAge',
+      'patientGender', 'patientID', 'patientContact', 'incidentDate',
+      'incidentLocation', 'incidentDescription', 'incidentWeapon'
+    ];
+
+    updatableFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        foundCase[field] = req.body[field];
+      }
+    });
+
+    foundCase.updatedAt = Date.now();
+    const updatedCase = await foundCase.save();
+
+    res.status(200).json({
+      _id: updatedCase._id,
+      status: updatedCase.status,
+      patientName: updatedCase.patientName,
+      updatedAt: updatedCase.updatedAt
+    });
   } catch (err) {
-    console.error('Erro ao atualizar caso:', err);
-    return res.status(500).json({ error: 'Erro no servidor' });
+    console.error('Erro ao atualizar caso:', err.message);
+    res.status(500).json({ error: 'Erro no servidor' });
   }
 };
 
-// Deletar caso — apenas admin
+// Função para deletar um caso (apenas admin)
 exports.deleteCase = async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ msg: 'Acesso negado!' });
+      return res.status(403).json({ error: 'Acesso negado: apenas administradores podem deletar casos' });
     }
 
-    const deleted = await Case.findByIdAndDelete(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ msg: 'Caso não encontrado' });
+    const deletedCase = await Case.findByIdAndDelete(req.params.id);
+    if (!deletedCase) {
+      return res.status(404).json({ error: 'Caso não encontrado' });
     }
 
-    return res.status(200).json({ msg: 'Caso deletado com sucesso' });
+    res.status(200).json({ message: 'Caso removido com sucesso', deletedCaseId: deletedCase._id });
   } catch (err) {
-    console.error('Erro ao deletar caso:', err);
-    return res.status(500).json({ error: 'Erro no servidor' });
+    console.error('Erro ao deletar caso:', err.message);
+    res.status(500).json({ error: 'Erro no servidor' });
   }
 };
 
-// Adicionar evidência — admin, perito e assistente (assistente só se vinculado ao caso)
+// Função para adicionar evidência a um caso (apenas admin e perito)
 exports.addEvidence = async (req, res) => {
   try {
-    const caso = await Case.findById(req.params.id);
-    if (!caso) {
-      return res.status(404).json({ msg: 'Caso não encontrado' });
+    if (!['admin', 'perito'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Apenas administradores e peritos podem adicionar evidências' });
     }
 
-    // Se for assistente, só pode adicionar se for assistente do caso
-    if (
-      req.user.role === 'assistente' &&
-      !caso.assistentes.some(id => id.equals(req.user._id))
-    ) {
-      return res.status(403).json({ msg: 'Acesso negado! Você não pertence a este caso.' });
+    const { caseId, evidenceData } = req.body;
+
+    const caseToUpdate = await Case.findById(caseId);
+    if (!caseToUpdate) {
+      return res.status(404).json({ error: 'Caso não encontrado' });
     }
 
-    caso.evidencias = caso.evidencias || [];
-    caso.evidencias.push(req.body.evidencia); // supondo que venha no corpo
+    caseToUpdate.evidences.push(evidenceData);
+    await caseToUpdate.save();
 
-    await caso.save();
-
-    return res.status(200).json({ msg: 'Evidência adicionada com sucesso.' });
+    res.status(201).json({ msg: 'Evidência adicionada com sucesso', case: caseToUpdate });
   } catch (err) {
-    console.error('Erro ao adicionar evidência:', err);
-    return res.status(500).json({ error: 'Erro no servidor' });
+    console.error('Erro ao adicionar evidência:', err.message);
+    res.status(500).json({ error: 'Erro no servidor' });
+  }
+};
+
+// Função para gerar relatório (todos os usuários podem)
+exports.generateReport = async (req, res) => {
+  try {
+    const { caseId } = req.query;
+
+    let caseToReport;
+    if (caseId) {
+      caseToReport = await Case.findById(caseId);
+      if (!caseToReport) {
+        return res.status(404).json({ error: 'Caso não encontrado' });
+      }
+    } else {
+      caseToReport = await Case.find();
+    }
+
+    res.json({ msg: 'Relatório gerado', case: caseToReport });
+  } catch (err) {
+    console.error('Erro ao gerar relatório:', err.message);
+    res.status(500).json({ error: 'Erro no servidor' });
   }
 };
