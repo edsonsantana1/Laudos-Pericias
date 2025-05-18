@@ -19,25 +19,14 @@ exports.createCase = async (req, res) => {
   }
 };
 
-// Listar todos os casos — admin, perito, assistente
+// Listar todos os casos — admin, perito, assistente (todos veem tudo)
 exports.getCases = async (req, res) => {
   try {
     if (!['admin', 'perito', 'assistente'].includes(req.user.role)) {
       return res.status(403).json({ msg: 'Acesso negado!' });
     }
 
-    let casos;
-
-    // Se for assistente, mostrar só casos vinculados a ele
-    if (req.user.role === 'assistente') {
-      casos = await Case.find({ assistentes: req.user._id }).populate('assignedUser').populate('assistentes');
-    } else if (req.user.role === 'perito') {
-      // perito vê todos, mas só pode editar os próprios (controle na edição)
-      casos = await Case.find().populate('assignedUser').populate('assistentes');
-    } else {
-      // admin vê todos
-      casos = await Case.find().populate('assignedUser').populate('assistentes');
-    }
+    const casos = await Case.find().populate('assignedUser').populate('assistentes');
 
     if (!casos.length) {
       return res.status(404).json({ msg: 'Nenhum caso encontrado.' });
@@ -57,11 +46,8 @@ exports.getCaseById = async (req, res) => {
       return res.status(404).json({ msg: 'Caso não encontrado' });
     }
 
-    // Verifica permissão para visualizar:
-    if (req.user.role === 'assistente' && !caso.assistentes.some(a => a._id.equals(req.user._id))) {
-      return res.status(403).json({ msg: 'Acesso negado!' });
-    }
-    // perito e admin veem todos
+    // Assistente pode visualizar todos sem restrição
+    // Se quiser controle mais rígido, pode verificar vinculo
 
     return res.status(200).json(caso);
   } catch (err) {
@@ -109,6 +95,34 @@ exports.deleteCase = async (req, res) => {
     return res.status(200).json({ msg: 'Caso deletado com sucesso' });
   } catch (err) {
     console.error('Erro ao deletar caso:', err);
+    return res.status(500).json({ error: 'Erro no servidor' });
+  }
+};
+
+// Adicionar evidência — admin, perito e assistente (assistente só se vinculado ao caso)
+exports.addEvidence = async (req, res) => {
+  try {
+    const caso = await Case.findById(req.params.id);
+    if (!caso) {
+      return res.status(404).json({ msg: 'Caso não encontrado' });
+    }
+
+    // Se for assistente, só pode adicionar se for assistente do caso
+    if (
+      req.user.role === 'assistente' &&
+      !caso.assistentes.some(id => id.equals(req.user._id))
+    ) {
+      return res.status(403).json({ msg: 'Acesso negado! Você não pertence a este caso.' });
+    }
+
+    caso.evidencias = caso.evidencias || [];
+    caso.evidencias.push(req.body.evidencia); // supondo que venha no corpo
+
+    await caso.save();
+
+    return res.status(200).json({ msg: 'Evidência adicionada com sucesso.' });
+  } catch (err) {
+    console.error('Erro ao adicionar evidência:', err);
     return res.status(500).json({ error: 'Erro no servidor' });
   }
 };

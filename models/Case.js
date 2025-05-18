@@ -22,7 +22,12 @@ const CaseSchema = new mongoose.Schema({
   incidentLocation: { type: String, required: true },
   incidentDescription: { type: String, required: true },
   incidentWeapon: { type: String },
-  assignedUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // <--- alterado de 'user' para 'assignedUser'
+
+  assignedUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
+  assistentes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // array de usuários assistentes
+  evidencias: [{ type: String }], // array de evidências, pode ajustar para um objeto mais complexo se quiser
+
   createdAt: { type: Date, default: Date.now }
 });
 
