@@ -13,4 +13,4 @@ const EvidenceSchema = new mongoose.Schema({
   attachment: { type: String }
 });
 
-module.exports = mongoose.model('Evidence', EvidenceSchema);
+module.exports = mongoose.models.Evidence || mongoose.model('Evidence', EvidenceSchema);
