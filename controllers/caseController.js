@@ -19,7 +19,6 @@ exports.createCase = async (req, res) => {
   } = req.body;
 
   try {
-    // Instancia um novo caso com os dados fornecidos
     const newCase = new Case({
       caseId,
       status,
@@ -34,11 +33,11 @@ exports.createCase = async (req, res) => {
       incidentLocation,
       incidentDescription,
       incidentWeapon,
-      assignedUser: req.user.id, // Vincula o caso ao usuário autenticado
+      assignedUser: req.user.id, // ou “user: req.user.id” se preferir alinhar com o schema
     });
 
-    const savedCase = await newCase.save(); // Salva no banco de dados
-    res.status(201).json(savedCase); // Retorna o caso criado
+    const savedCase = await newCase.save();
+    res.status(201).json(savedCase);
   } catch (err) {
     console.error('Erro ao criar caso:', err.message);
     res.status(500).json({ error: 'Erro no servidor' });
@@ -49,19 +48,11 @@ exports.createCase = async (req, res) => {
 exports.getCases = async (req, res) => {
   try {
     let cases;
-
-    console.log("Usuário acessando casos:", req.user.role, "ID:", req.user.id);
-
-    // Admin vê todos os casos
     if (req.user.role === 'admin') {
-      cases = await Case.find(); // Retorna todos os casos corretamente
-    } 
-    // Perito e Assistente veem apenas casos atribuídos a eles
-    else if (req.user.role === 'perito' || req.user.role === 'assistente') {
-      cases = await Case.find({ assignedUser: req.user.id });
-    } 
-    // Usuário sem permissão
-    else {
+      cases = await Case.find().populate('assignedUser'); 
+    } else if (['perito','assistente'].includes(req.user.role)) {
+      cases = await Case.find({ assignedUser: req.user.id }).populate('assignedUser');
+    } else {
       return res.status(403).json({ msg: "Acesso negado!" });
     }
 
@@ -69,52 +60,34 @@ exports.getCases = async (req, res) => {
       return res.status(404).json({ msg: "Nenhum caso encontrado." });
     }
 
-    res.status(200).json(cases); // Retorna os casos encontrados
+    res.status(200).json(cases);
   } catch (err) {
     console.error('Erro ao obter casos:', err.message);
     res.status(500).json({ error: 'Erro no servidor' });
   }
 };
 
+// **Nova função**: buscar um caso por ID
+exports.getCaseById = async (req, res) => {
+  try {
+    const found = await Case.findById(req.params.id).populate('assignedUser');
+    if (!found) return res.status(404).json({ msg: 'Caso não encontrado' });
+    res.status(200).json(found);
+  } catch (err) {
+    console.error('Erro ao buscar caso:', err.message);
+    res.status(500).json({ error: 'Erro no servidor' });
+  }
+};
+
 // Função para atualizar um caso por ID
 exports.updateCase = async (req, res) => {
-  const {
-    caseId,
-    status,
-    description,
-    patientName,
-    patientDOB,
-    patientAge,
-    patientGender,
-    patientID,
-    patientContact,
-    incidentDate,
-    incidentLocation,
-    incidentDescription,
-    incidentWeapon,
-  } = req.body;
-
+  const updates = req.body;
   try {
     const foundCase = await Case.findById(req.params.id);
     if (!foundCase) {
       return res.status(404).json({ msg: 'Caso não encontrado' });
     }
-
-    // Atualiza os campos fornecidos ou mantém os valores atuais
-    foundCase.caseId = caseId || foundCase.caseId;
-    foundCase.status = status || foundCase.status;
-    foundCase.description = description || foundCase.description;
-    foundCase.patientName = patientName || foundCase.patientName;
-    foundCase.patientDOB = patientDOB || foundCase.patientDOB;
-    foundCase.patientAge = patientAge || foundCase.patientAge;
-    foundCase.patientGender = patientGender || foundCase.patientGender;
-    foundCase.patientID = patientID || foundCase.patientID;
-    foundCase.patientContact = patientContact || foundCase.patientContact;
-    foundCase.incidentDate = incidentDate || foundCase.incidentDate;
-    foundCase.incidentLocation = incidentLocation || foundCase.incidentLocation;
-    foundCase.incidentDescription = incidentDescription || foundCase.incidentDescription;
-    foundCase.incidentWeapon = incidentWeapon || foundCase.incidentWeapon;
-
+    Object.assign(foundCase, updates);
     const updatedCase = await foundCase.save();
     res.status(200).json(updatedCase);
   } catch (err) {
