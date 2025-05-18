@@ -1,12 +1,23 @@
-// controllers/caseController.js
 const Case = require('../models/Case');
 
-// ...
+// 1. Criar caso — apenas admin e perito
+exports.createCase = async (req, res) => {
+  try {
+    const novoCaso = new Case({
+      ...req.body,
+      assignedUser: req.user.id // o perito criador
+    });
+    const saved = await novoCaso.save();
+    res.status(201).json(saved);
+  } catch (err) {
+    console.error('Erro ao criar caso:', err);
+    res.status(500).json({ error: 'Erro no servidor' });
+  }
+};
 
-// 1. GET /api/cases — todos podem listar TUDO
+// 2. Listar todos os casos — admin, perito, assistente
 exports.getCases = async (req, res) => {
   try {
-    // só verifica se está autenticado: admin, perito e assistente sempre entram
     if (!['admin','perito','assistente'].includes(req.user.role)) {
       return res.status(403).json({ msg: 'Acesso negado!' });
     }
@@ -21,7 +32,21 @@ exports.getCases = async (req, res) => {
   }
 };
 
-// 2. PUT /api/cases/:id — só admin ou perito dono podem editar
+// 3. Visualizar caso por ID — qualquer autenticado
+exports.getCaseById = async (req, res) => {
+  try {
+    const caso = await Case.findById(req.params.id).populate('assignedUser');
+    if (!caso) {
+      return res.status(404).json({ msg: 'Caso não encontrado' });
+    }
+    return res.status(200).json(caso);
+  } catch (err) {
+    console.error('Erro ao buscar caso:', err);
+    return res.status(500).json({ error: 'Erro no servidor' });
+  }
+};
+
+// 4. Atualizar caso — só admin ou perito dono
 exports.updateCase = async (req, res) => {
   try {
     const foundCase = await Case.findById(req.params.id);
@@ -29,7 +54,6 @@ exports.updateCase = async (req, res) => {
       return res.status(404).json({ msg: 'Caso não encontrado' });
     }
 
-    // somente admin OU perito que criou podem editar
     if (
       req.user.role !== 'admin' &&
       !(req.user.role === 'perito' && foundCase.assignedUser.equals(req.user.id))
@@ -46,10 +70,21 @@ exports.updateCase = async (req, res) => {
   }
 };
 
-// 3. DELETE continua só para admin
+// 5. Deletar caso — apenas admin
 exports.deleteCase = async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ msg: 'Acesso negado!' });
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ msg: 'Acesso negado!' });
+    }
+
+    const deleted = await Case.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ msg: 'Caso não encontrado' });
+    }
+
+    return res.status(200).json({ msg: 'Caso deletado com sucesso' });
+  } catch (err) {
+    console.error('Erro ao deletar caso:', err);
+    return res.status(500).json({ error: 'Erro no servidor' });
   }
-  // resto do código de deleção...
 };

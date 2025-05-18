@@ -1,21 +1,29 @@
 const mongoose = require('mongoose');
 
 const CaseSchema = new mongoose.Schema({
-  caseId: { type: String, required: true, unique: true }, // ID único do Caso
-  status: { type: String, enum: ['em andamento', 'finalizado', 'arquivado'], default: 'em andamento' }, // Status
-  description: { type: String, required: true }, // Descrição do Caso
-  patientName: { type: String, required: true }, // Nome do Paciente
-  patientDOB: { type: Date, required: true }, // Data de Nascimento do Paciente
-  patientAge: { type: Number, required: true }, // Idade do Paciente
-  patientGender: { type: String, enum: ['masculino', 'feminino', 'outro'], required: true }, // Gênero
-  patientID: { type: String, required: true }, // Documento de Identidade do Paciente
-  patientContact: { type: String }, // Contato do Paciente
-  incidentDate: { type: Date, required: true }, // Data do Incidente
-  incidentLocation: { type: String, required: true }, // Local do Incidente
-  incidentDescription: { type: String, required: true }, // Descrição do Incidente
-  incidentWeapon: { type: String }, // Instrumento/Arma do Incidente (opcional)
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Referência ao Usuário
-  createdAt: { type: Date, default: Date.now } // Data e Hora de Criação
+  caseId: { type: String, required: true, unique: true },
+  status: {
+    type: String,
+    enum: ['em andamento', 'finalizado', 'arquivado'],
+    default: 'em andamento'
+  },
+  description: { type: String, required: true },
+  patientName: { type: String, required: true },
+  patientDOB: { type: Date, required: true },
+  patientAge: { type: Number, required: true },
+  patientGender: {
+    type: String,
+    enum: ['masculino', 'feminino', 'outro'],
+    required: true
+  },
+  patientID: { type: String, required: true },
+  patientContact: { type: String },
+  incidentDate: { type: Date, required: true },
+  incidentLocation: { type: String, required: true },
+  incidentDescription: { type: String, required: true },
+  incidentWeapon: { type: String },
+  assignedUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // <--- alterado de 'user' para 'assignedUser'
+  createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Case', CaseSchema); 
+module.exports = mongoose.model('Case', CaseSchema);
