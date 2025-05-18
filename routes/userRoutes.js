@@ -1,48 +1,60 @@
-require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const connectDB = require('./config/db');
-const authRoutes = require('./routes/authRoutes');
-const caseRoutes = require('./routes/caseRoutes');
-const userRoutes = require('./routes/userRoutes');
-const evidenceRoutes = require('./routes/evidenceRoutes');
-const laudoRoutes = require('./routes/laudoRoutes');
-const relatorioRoutes = require('./routes/relatorioRoutes');
+const router = express.Router();
+const { isValidObjectId } = require('mongoose');
+const {
+  createUser,
+  getAllUsers,
+  getUser,
+  updateUser,
+  deleteUser
+} = require('../controllers/userController');
+const { authMiddleware, roleMiddleware } = require('../middleware/authMiddleware');
 
-const app = express();
+// Validação de ID nas rotas que precisam
+router.get('/:id', authMiddleware, async (req, res, next) => {
+  if (!isValidObjectId(req.params.id)) {
+    return res.status(400).json({ msg: 'ID inválido' });
+  }
+  next();
+}, getUser);
 
-// 1) CORS — permitir apenas seu frontend publicado
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://127.0.0.1:5500', // adicionado Live Server do VS Code
-    'http://localhost:5500', // também pode incluir esse
-    'https://dent-case.netlify.app'
-  ], // adiciona localhost
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+// Listar todos os usuários (apenas admin) com paginação
+router.get(
+  '/',
+  authMiddleware,
+  roleMiddleware(['admin']), // Somente admin pode listar
+  getAllUsers
+);
 
-// 2) Body parser
-app.use(express.json());
+// Obter um único usuário por ID
+router.get(
+  '/:id',
+  authMiddleware,
+  getUser
+);
 
-// 3) Rota de teste para a raiz
-app.get('/', (req, res) => {
-  res.send('API Laudos Periciais rodando 🚀');
-});
+// Atualizar um usuário (somente admin pode atualizar qualquer usuário)
+router.put(
+  '/:id',
+  authMiddleware,
+  roleMiddleware(['admin']), // Apenas admin pode atualizar usuários
+  updateUser
+);
 
-// 4) Conexão com MongoDB
-connectDB();
+// Deletar um usuário (somente admin pode deletar qualquer usuário)
+router.delete(
+  '/:id',
+  authMiddleware,
+  roleMiddleware(['admin']), // Apenas admin pode deletar usuários
+  deleteUser
+);
 
-// 5) Rotas da API
-app.use('/api/auth', authRoutes);
-app.use('/api/cases', caseRoutes);  // Certifique-se que no frontend a URL seja `/api/cases`
-app.use('/api/users', userRoutes);
-app.use('/api/evidences', evidenceRoutes);
-app.use('/api/laudos', laudoRoutes);
-app.use('/api/relatorios', relatorioRoutes);
+// Criar novo usuário (apenas admin)
+router.post(
+  '/',
+  authMiddleware,
+  roleMiddleware(['admin']), // Apenas admin pode criar novos usuários
+  createUser
+);
 
-// 6) Inicializar servidor
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+module.exports = router;
